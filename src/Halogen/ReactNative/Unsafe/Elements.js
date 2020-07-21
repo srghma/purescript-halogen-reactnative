@@ -3,8 +3,8 @@
 // module Halogen.ReactNative.Unsafe.Elements
 
 
-var createReactClass = require('create-react-class');
-var React = require('react');
+// var createReactClass = require('create-react-class');
+// var React = require('react');
 var RN = require('react-native');
 
 // React classes

@@ -12,85 +12,82 @@ module Halogen.ReactNative.Events
   , onSelectionChange
   , onSubmitEditing
   , onKeyPress
-  , module Halogen.HTML.Events
   ) where
 
 
 import Prelude
 
-import Data.Maybe (Maybe)
-import Halogen.HTML.Events (input, input_)
-import Halogen.Query.InputF (InputF(..))
+import Data.Maybe (Maybe(..))
+import Halogen.Query.Input (Input(..))
 import Halogen.ReactNative.Properties (IProp(..))
-import ReactNative.Basic (EventType(..), NativeEvent, Prop(Handler))
+import ReactNative.Basic (EventType(..), NativeEvent, Prop(..))
 import ReactNative.EventTypes (PressEvent, ScrollEvent, TextInputEvent, TouchEvent, SelectionChangeEvent, KeyPressEvent)
 import Unsafe.Coerce (unsafeCoerce)
 
+handler :: forall r i. EventType -> (NativeEvent -> i) -> IProp r i
+handler et f = IProp $ Handler et \ev -> Just (Action (f ev))
 
-handler :: forall r i. EventType -> (NativeEvent -> Maybe i) -> IProp r i
-handler evt = IProp <<< Handler evt <<< map (map Query)
 
-
-pressHandler :: forall i . (PressEvent -> Maybe i) -> (NativeEvent -> Maybe i)
+pressHandler :: forall i . (PressEvent -> i) -> (NativeEvent -> i)
 pressHandler = unsafeCoerce
 
-touchHandler :: forall i . (TouchEvent -> Maybe i) -> (NativeEvent -> Maybe i)
+touchHandler :: forall i . (TouchEvent -> i) -> (NativeEvent -> i)
 touchHandler = unsafeCoerce
 
-changeTextHandler :: forall i. (String -> Maybe i) -> (NativeEvent -> Maybe i)
+changeTextHandler :: forall i. (String -> i) -> (NativeEvent -> i)
 changeTextHandler = unsafeCoerce
 
-keyPressHandler :: forall i . (KeyPressEvent -> Maybe i) -> (NativeEvent -> Maybe i)
+keyPressHandler :: forall i . (KeyPressEvent -> i) -> (NativeEvent -> i)
 keyPressHandler = unsafeCoerce
 
-scrollHandler :: forall i . (ScrollEvent -> Maybe i) -> (NativeEvent -> Maybe i)
+scrollHandler :: forall i . (ScrollEvent -> i) -> (NativeEvent -> i)
 scrollHandler = unsafeCoerce
 
-selectionChangeHandler :: forall i . (SelectionChangeEvent -> Maybe i) -> (NativeEvent -> Maybe i)
+selectionChangeHandler :: forall i . (SelectionChangeEvent -> i) -> (NativeEvent -> i)
 selectionChangeHandler = unsafeCoerce
 
 
 
-onPress :: forall r i . (PressEvent -> Maybe i) -> IProp (onPress :: PressEvent | r) i
+onPress :: forall r i . (PressEvent -> i) -> IProp (onPress :: PressEvent | r) i
 onPress = handler (EventType "onPress") <<< pressHandler
 
-onResponderGrant :: forall r i . (TouchEvent -> Maybe i) -> IProp (onResponderGrant :: TouchEvent | r) i
+onResponderGrant :: forall r i . (TouchEvent -> i) -> IProp (onResponderGrant :: TouchEvent | r) i
 onResponderGrant = handler (EventType "onResponderGrant") <<< touchHandler
 
-onResponderMove :: forall r i . (TouchEvent -> Maybe i) -> IProp (onResponderMove :: TouchEvent | r) i
+onResponderMove :: forall r i . (TouchEvent -> i) -> IProp (onResponderMove :: TouchEvent | r) i
 onResponderMove = handler (EventType "onResponderMove") <<< touchHandler
 
-onResponderReject :: forall r i . (TouchEvent -> Maybe i) -> IProp (onResponderReject :: TouchEvent | r) i
+onResponderReject :: forall r i . (TouchEvent -> i) -> IProp (onResponderReject :: TouchEvent | r) i
 onResponderReject = handler (EventType "onResponderReject") <<< touchHandler
 
-onResponderRelease :: forall r i . (TouchEvent -> Maybe i) -> IProp (onResponderRelease :: TouchEvent | r) i
+onResponderRelease :: forall r i . (TouchEvent -> i) -> IProp (onResponderRelease :: TouchEvent | r) i
 onResponderRelease = handler (EventType "onResponderRelease") <<< touchHandler
 
-onResponderTerminate :: forall r i . (TouchEvent -> Maybe i) -> IProp (onResponderTerminate :: TouchEvent | r) i
+onResponderTerminate :: forall r i . (TouchEvent -> i) -> IProp (onResponderTerminate :: TouchEvent | r) i
 onResponderTerminate = handler (EventType "onResponderTerminate") <<< touchHandler
 
 onResponderTerminationRequest
   :: forall r i
-   . (TouchEvent -> Maybe i)
+   . (TouchEvent -> i)
   -> IProp (onResponderTerminationRequest :: TouchEvent | r) i
 onResponderTerminationRequest =
   handler (EventType "onResponderTerminationRequest") <<< touchHandler
 
-onChangeText :: forall r i . (TextInputEvent -> Maybe i) -> IProp (onChangeText :: TextInputEvent | r) i
+onChangeText :: forall r i . (TextInputEvent -> i) -> IProp (onChangeText :: TextInputEvent | r) i
 onChangeText = handler (EventType "onChangeText") <<< changeTextHandler
 
-onScroll :: forall r i . (ScrollEvent -> Maybe i) -> IProp (onScroll :: ScrollEvent | r) i
+onScroll :: forall r i . (ScrollEvent -> i) -> IProp (onScroll :: ScrollEvent | r) i
 onScroll = handler (EventType "onScroll") <<< scrollHandler
 
 onSelectionChange
   :: forall r i
-   . (SelectionChangeEvent -> Maybe i)
+   . (SelectionChangeEvent -> i)
   -> IProp (onSelectionChange :: SelectionChangeEvent | r) i
 onSelectionChange = handler (EventType "onSelectionChange") <<< selectionChangeHandler
 
-onSubmitEditing :: forall r i . (Unit -> Maybe i) -> IProp (onSubmitEditing :: Unit | r) i
+onSubmitEditing :: forall r i . (Unit -> i) -> IProp (onSubmitEditing :: Unit | r) i
 onSubmitEditing = handler (EventType "onSubmitEditing") <<< pressHandler
 
-onKeyPress :: forall r i . (KeyPressEvent -> Maybe i) -> IProp (onKeyPress :: KeyPressEvent | r) i
+onKeyPress :: forall r i . (KeyPressEvent -> i) -> IProp (onKeyPress :: KeyPressEvent | r) i
 onKeyPress = handler (EventType "onKeyPress") <<< keyPressHandler
 

@@ -63,7 +63,7 @@ exports.mkComponent = function(element) {
   return {rclass: rclass, self: stuff,};
 };
 
-exports.registerComponent = function(name){
+exports.registerComponent = function(name) {
   return function(rclass){
     return function(){
       RN.AppRegistry.registerComponent(name, function(){ return rclass; });

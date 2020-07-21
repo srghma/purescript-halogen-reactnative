@@ -14,15 +14,15 @@ import Effect.Ref as Ref
 import Halogen.Aff.Driver (HalogenIO)
 import Halogen.Aff.Driver as AD
 import Halogen.Aff.Driver.State (RenderStateX, unRenderStateX)
-import Halogen.Component (ComponentSlot, Component)
-import Halogen.Query.InputF (InputF)
+import Halogen.Component
+import Halogen.Query.Input (Input)
 import Halogen.ReactNative.Core (VIEW(..), Native(..), runGraft)
 import Halogen.ReactNative.Unsafe.Elements (textElemU, textU)
 import ReactNative.Basic (NativeClass, NativeElement, NativeProps, NativeThis, Prop(..))
 import ReactNative.Basic as RB
 
 
-newtype RenderState s (f :: Type -> Type) (g :: Type -> Type) p o =
+newtype RenderState state action (slots :: # Type) output =
   RenderState
     { keyId :: Int
     , rclass :: NativeClass
@@ -34,14 +34,14 @@ type AppName = String
 
 
 runUI
-  :: forall f i o
-   . Component VIEW f i o Aff
-  -> i
+  :: forall query input output
+   . Component VIEW query input output Aff
+  -> input
   -> AppName
-  -> Aff (HalogenIO f o Aff)
-runUI component i appName = do
+  -> Aff (HalogenIO query output Aff)
+runUI component input appName = do
   keyId <- liftEffect (Ref.new 0)
-  AD.runUI (mkRenderSpec appName keyId) component i
+  AD.runUI (mkRenderSpec appName keyId) component input
 
 mkRenderSpec
   :: AppName
@@ -51,18 +51,20 @@ mkRenderSpec appName keyRef =
   { render
   , renderChild: identity
   , removeChild: const (pure unit)
+  , dispose: const (pure unit)
   }
   where
 
   render
-    :: forall s f g p o
-     . (forall x. InputF x (f x) -> Effect Unit)
-    -> (ComponentSlot VIEW g Aff p (f Unit) -> Effect (RenderStateX RenderState))
-    -> VIEW (ComponentSlot VIEW g Aff p (f Unit)) (f Unit)
-    -> Maybe (RenderState s f g p o)
-    -> Effect (RenderState s f g p o)
-  render driver child view lastRender = do
-    node <- renderView driver (map getElement <<< child) view
+    :: forall state action slots output
+     . (Input action -> Effect Unit)
+    -> (ComponentSlotBox VIEW slots Aff action -> Effect (RenderStateX RenderState))
+    -> VIEW (ComponentSlot VIEW slots Aff action) action
+    -> Boolean
+    -> Maybe (RenderState state action slots output)
+    -> Effect (RenderState state action slots output)
+  render handler renderChild view isRoot lastRender = do
+    node <- renderView handler (map getElement <<< renderChild) view
     case lastRender of
       Nothing -> do
         keyId <- Ref.modify (_ + 1) keyRef
@@ -73,24 +75,21 @@ mkRenderSpec appName keyRef =
         RB.updateState node r.self
         pure $ RenderState r
 
-
 getElement :: RenderStateX RenderState -> NativeElement
 getElement = unRenderStateX \(RenderState { node, rclass }) ->
   case node of
     Just n -> n
     Nothing -> RB.element rclass mempty
 
-
 renderView
-  :: forall p i m
-   . Monad m
-  => (InputF Unit i -> Effect  Unit)
-  -> (p -> m NativeElement)
-  -> VIEW p i
-  -> m NativeElement
-renderView driver handleSlot (VIEW view) = go view
+  :: forall slots action
+   . (Input action -> Effect Unit)
+  -> (ComponentSlotBox VIEW slots Aff action -> Aff NativeElement)
+  -> VIEW (ComponentSlot VIEW slots Aff action) action
+  -> Aff NativeElement
+renderView handler handleWidget (VIEW view) = go view
   where
-    go :: Native (Array (Prop (InputF Unit i))) p -> m NativeElement
+    go :: Native (Array (Prop (Input action))) (ComponentSlot VIEW slots Aff action) -> Aff NativeElement
     go (Text str) =
       let textElem = textElemU str
           props = runFn2 RB.prop "children" textElem
@@ -99,22 +98,28 @@ renderView driver handleSlot (VIEW view) = go view
     go (Elem nClass props children) = do
       children' <- traverse go children
       let childProp = runFn2 RB.prop "children" children'
-      let nativeProps = (foldMap (renderProp driver) props <> childProp)
+      let nativeProps = (foldMap (renderProp handler) props <> childProp)
       pure $ RB.element nClass nativeProps
 
-    go (Grafted gd) =
-      go (runGraft gd)
-    go (Widget w) =
-      handleSlot w
+    go (Grafted gd) = go (runGraft gd)
 
+    go (Widget (slot :: ComponentSlot VIEW slots Aff action)) =
+      case slot of
+        ComponentSlot cs -> unsafeCoerce unit
+          -- | EFn.runEffectFn3 renderComponentSlot renderChildRef render cs
+        ThunkSlot t -> do
+          step <- EFn.runEffectFn1 (Thunk.buildThunk unwrap spec) t
+          pure $ V.mkStep $ V.Step (V.extract step) (Just step) (Fn.runFn2 mkPatch renderChildRef render) widgetDone
+
+      -- ?a $ handleWidget w
 
 renderProp
-  :: forall i
-   . (InputF Unit i -> Effect Unit)
-  -> Prop (InputF Unit i)
+  :: forall action
+   . (Input action -> Effect Unit)
+  -> Prop (Input action)
   -> NativeProps
-renderProp driver = case _ of
+renderProp handler = case _ of
   Property name value -> runFn2 RB.prop name value
   Handler evType k ->
-    runFn2 RB.handlerProp evType (maybe (pure unit) driver <<< k)
-  Nested name prop -> runFn2 RB.prop name (renderProp driver prop)
+    runFn2 RB.handlerProp evType (maybe (pure unit) handler <<< k)
+  Nested name prop -> runFn2 RB.prop name (renderProp handler prop)

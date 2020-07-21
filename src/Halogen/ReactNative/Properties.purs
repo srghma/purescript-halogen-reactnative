@@ -4,11 +4,11 @@ module Halogen.ReactNative.Properties where
 import Prelude
 
 import Data.Newtype (class Newtype)
-import Halogen.Query.InputF (InputF)
+import Halogen.Query.Input (Input)
 import ReactNative.Basic (Prop(..), PropValue, toProp)
 
 
-newtype IProp (r :: # Type) i = IProp (Prop (InputF Unit i))
+newtype IProp (r :: # Type) i = IProp (Prop (Input i))
 
 derive instance functorIProp :: Functor (IProp r)
 derive instance newtypeIProp :: Newtype (IProp r i) _

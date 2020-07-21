@@ -3,7 +3,6 @@ module Halogen.ReactNative.Core
   , Native(..)
   , ComponentVIEW
   , ParentVIEW
-  , slot
   , Graft(..)
   , GraftX(..)
   , unGraft
@@ -14,23 +13,22 @@ module Halogen.ReactNative.Core
 import Prelude
 
 import Data.Bifunctor (class Bifunctor, bimap, rmap)
-import Halogen.Query.InputF (InputF)
+import Halogen.Query.Input (Input)
 import Halogen.Component (ComponentSlot)
 import ReactNative.Basic (NativeClass, Prop)
 import Unsafe.Coerce (unsafeCoerce)
 
-type ParentVIEW f g p m = VIEW (ComponentSlot VIEW g m p (f Unit)) (f Unit)
+type ParentVIEW action slots m = VIEW (ComponentSlot VIEW slots m action) action
 
-newtype VIEW p i = VIEW (Native (Array (Prop (InputF Unit i))) p)
+newtype VIEW w i = VIEW (Native (Array (Prop (Input i))) w)
 
 instance bifunctorVIEW :: Bifunctor VIEW where
   bimap f g (VIEW vdom) = VIEW (bimap (map (map (map g))) f vdom)
 
-instance functorVIEW :: Functor (VIEW p) where
+instance functorVIEW :: Functor (VIEW w) where
   map = rmap
 
-type ComponentVIEW f = VIEW Void (f Unit)
-
+type ComponentVIEW f = VIEW Void Void
 
 -- | `a` is the type of attributes,
 data Native a w
@@ -39,21 +37,13 @@ data Native a w
   | Widget w
   | Grafted (Graft a w)
 
-
-slot :: forall p q. p -> VIEW p q
-slot = VIEW <<< Widget
-
-
 instance bifunctorNative ∷ Bifunctor Native where
   bimap f g (Text a) = Text a
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
 
-
 instance functorNative :: Functor (Native a) where
   map = rmap
-
-
 
 -- Not sure what this is yet, but it looks important
 foreign import data Graft ∷ Type → Type → Type
@@ -89,7 +79,7 @@ runGraft =
     let
       go (Text s) = Text s
       go (Widget w) = Widget (fw w)
-      go (Elem comp p ch) = Elem comp (fa p) (map go ch)
+      go (Elem nativeClass p ch) = Elem nativeClass (fa p) (map go ch)
       go (Grafted g) = Grafted (bimap fa fw g)
     in
       go v
