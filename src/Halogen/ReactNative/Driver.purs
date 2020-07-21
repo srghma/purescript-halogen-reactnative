@@ -1,25 +1,29 @@
 module Halogen.ReactNative.Driver  where
 
+import Halogen.Component
 import Prelude
 
 import Data.Foldable (foldMap)
 import Data.Function.Uncurried (runFn2)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (unwrap)
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Ref (Ref)
 import Effect.Ref as Ref
+import Effect.Uncurried (runEffectFn1) as EFn
 import Halogen.Aff.Driver (HalogenIO)
 import Halogen.Aff.Driver as AD
 import Halogen.Aff.Driver.State (RenderStateX, unRenderStateX)
-import Halogen.Component
 import Halogen.Query.Input (Input)
 import Halogen.ReactNative.Core (VIEW(..), Native(..), runGraft)
 import Halogen.ReactNative.Unsafe.Elements (textElemU, textU)
+import Halogen.VDom.Thunk (buildThunk) as Thunk
 import ReactNative.Basic (NativeClass, NativeElement, NativeProps, NativeThis, Prop(..))
 import ReactNative.Basic as RB
+import Unsafe.Coerce (unsafeCoerce)
 
 
 newtype RenderState state action (slots :: # Type) output =
@@ -31,7 +35,6 @@ newtype RenderState state action (slots :: # Type) output =
     }
 
 type AppName = String
-
 
 runUI
   :: forall query input output
@@ -96,8 +99,8 @@ renderView handler handleWidget (VIEW view) = go view
         in pure $ RB.element textU props
 
     go (Elem nClass props children) = do
-      children' <- traverse go children
-      let childProp = runFn2 RB.prop "children" children'
+      (children' :: Array ?a) <- traverse go children
+      let childProp = runFn2 RB.prop "children" children' -- ?????TODO in array?
       let nativeProps = (foldMap (renderProp handler) props <> childProp)
       pure $ RB.element nClass nativeProps
 

@@ -45,7 +45,7 @@ type ContentSizeEvent =
 
 type ScrollEvent =
   { nativeEvent ::
-    { contentOffset :: {x::Number, y::Number}
+    { contentOffset :: { x::Number, y::Number }
     }
   }
 
